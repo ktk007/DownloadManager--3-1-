@@ -1,19 +1,34 @@
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.filechooser.FileSystemView;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Properties;
 
 
 // The Download Manager.
 public class DownloadManager extends JFrame
         implements Observer {
-//add history
-private ArrayList<Download> downloadHistory;
+
+    // Database connection details
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/download_manager_db";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "admin";
+    private File downloadFolder;
+
+
+    private Connection connection;
+    //add history
+    private ArrayList<Download> downloadHistory;
+
 
     // Add download text field.
     private JTextField addTextField;
@@ -34,12 +49,29 @@ private ArrayList<Download> downloadHistory;
 
     // Flag for whether or not table selection is being cleared.
     private boolean clearing;
+    private File chooseDownloadFolder() {
+        JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        fileChooser.setDialogTitle("Select Download Folder");
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        int returnValue = fileChooser.showOpenDialog(this);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            return fileChooser.getSelectedFile();
+        }
+
+        return null;
+    }
+
 
     // Constructor for Download Manager.
     public DownloadManager() {
 
         // Initialize the downloadHistory list
         downloadHistory = new ArrayList<>();
+        // Set up database connection
+        initializeDatabaseConnection();
+
+
         // Set application title.
         setTitle("Download Manager");
 
@@ -80,7 +112,6 @@ private ArrayList<Download> downloadHistory;
         });
         addPanel.add(addButton);
         // Add panel for folder selection.
-
 
 
         // Set up Downloads table.
@@ -162,8 +193,35 @@ private ArrayList<Download> downloadHistory;
         getContentPane().add(buttonsPanel, BorderLayout.SOUTH);
     }
 
+    private void initializeDatabaseConnection() {
+        try {
+            Properties props = new Properties();
+            props.put("user", DB_USER);
+            props.put("password", DB_PASSWORD);
+            connection = DriverManager.getConnection(DB_URL, props);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to connect to the database.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     // Exit this program.
     private void actionExit() {
+        // Delete all downloads from the database before exiting
+        try {
+            Download[] downloadList = new Download[0];
+            for (Download download : downloadList) {
+                deleteDownloadFromDatabase(download);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to delete download history from the database.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+
         System.exit(0);
     }
 
@@ -171,7 +229,12 @@ private ArrayList<Download> downloadHistory;
     private void actionAdd() {
         URL verifiedUrl = verifyUrl(addTextField.getText());
         if (verifiedUrl != null) {
-            tableModel.addDownload(new Download(verifiedUrl));
+            File downloadFolder = chooseDownloadFolder();
+            if (downloadFolder != null) {
+                tableModel.addDownload(new Download(verifiedUrl, downloadFolder));
+                System.out.println("DownloadManager.actionAdd() - Download added to tableModel.");
+
+            }
             addTextField.setText(""); // reset add text field
         } else {
             JOptionPane.showMessageDialog(this,
@@ -226,6 +289,8 @@ private ArrayList<Download> downloadHistory;
             if (selectedDownload.getStatus() == Download.COMPLETE && !downloadHistory.contains(selectedDownload)) {
                 tableModel.addDownloadToHistory(selectedDownload);
                 downloadHistory.add(selectedDownload);
+                selectedDownload.addObserver(DownloadManager.this); // Add observer to the newly added history download
+
             }
         }
     }
@@ -250,6 +315,18 @@ private ArrayList<Download> downloadHistory;
 
     // Clear the selected download.
     private void actionClear() {
+        // Delete the selected download from the database
+        try {
+            if (selectedDownload != null) {
+                deleteDownloadFromDatabase(selectedDownload);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to delete the download from the database.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+
         clearing = true;
         tableModel.clearDownload(table.getSelectedRow());
         clearing = false;
@@ -257,61 +334,70 @@ private ArrayList<Download> downloadHistory;
         updateButtons();
     }
 
-    //history button
-    private void actionHistory() {
-        ArrayList<Download> downloadHistory = tableModel.getDownloadList();
-
-        StringBuilder historyMessage = new StringBuilder();
-        for (Download download : downloadHistory) {
-            historyMessage.append("URL: ").append(download.getUrl()).append("\n");
-            historyMessage.append("Size: ").append(download.getSize()).append(" bytes\n");
-            historyMessage.append("Status: ").append(Download.STATUSES[download.getStatus()]).append("\n");
-            historyMessage.append("------------------------------------------------\n");
-        }
-
-        if (downloadHistory.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No past downloads.", "Download History", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JTextArea textArea = new JTextArea(historyMessage.toString());
-            textArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(textArea);
-            scrollPane.setPreferredSize(new Dimension(600, 400));
-            JOptionPane.showMessageDialog(this, scrollPane, "Download History", JOptionPane.INFORMATION_MESSAGE);
+    // Method to delete a download from the database.
+    private void deleteDownloadFromDatabase(Download download) throws SQLException {
+        String sql = "DELETE FROM download_history WHERE url = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, download.getUrl());
+            statement.executeUpdate();
         }
     }
-    // Show Download History
-   /* private void showDownloadHistory() {
-        if (downloadHistory.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Download history is empty.", "History", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
 
-        JDialog historyDialog = new JDialog(this, "Download History", true);
-        historyDialog.setSize(400, 300);
-        historyDialog.setLayout(new BorderLayout());
+    //history button
+    private void actionHistory()  {
+        try {
 
-        DefaultListModel<String> historyListModel = new DefaultListModel<>();
-        for (Download download : downloadHistory) {
-            historyListModel.addElement(download.getFileName());
-        }
-
-        JList<String> historyList = new JList<>(historyListModel);
-        historyList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        JScrollPane scrollPane = new JScrollPane(historyList);
-        historyDialog.add(scrollPane, BorderLayout.CENTER);
-
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                historyDialog.dispose();
+            // Retrieve download history from the database
+            ArrayList<Download> downloadHistory = fetchDownloadHistoryFromDatabase();
+            StringBuilder historyMessage = new StringBuilder();
+            for (Download download : downloadHistory) {
+                historyMessage.append("URL: ").append(download.getUrl()).append("\n");
+                historyMessage.append("Size: ").append(download.getSize()).append(" bytes\n");
+                historyMessage.append("Progress: ").append(download.getProgress()).append("%\n");
+                historyMessage.append("Status: ").append(Download.STATUSES[download.getStatus()]).append("\n");
+                historyMessage.append("------------------------------------------------\n");
             }
-        });
-        historyDialog.add(closeButton, BorderLayout.SOUTH);
 
-        historyDialog.setLocationRelativeTo(this);
-        historyDialog.setVisible(true);
-    }*/
+            if (downloadHistory.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No past downloads.", "Download History", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JTextArea textArea = new JTextArea(historyMessage.toString());
+                textArea.setEditable(false);
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(600, 400));
+                JOptionPane.showMessageDialog(this, scrollPane, "Download History", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to retrieve download history from the database.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+    // Method to retrieve download history from the database.
+    private ArrayList<Download> fetchDownloadHistoryFromDatabase() throws SQLException {
+        ArrayList<Download> downloadHistory = new ArrayList<>();
+        String sql = "SELECT * FROM download_history";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String url = resultSet.getString("url");
+                long size = resultSet.getInt("size");
+                float progress = resultSet.getFloat("progress");
+                int status = resultSet.getInt("status");
+                Download download = new Download(new URL(url),downloadFolder);
+                download.setSize((int) size);
+                download.setStatus(status);
+                download.setDownloaded((long) (size * progress / 100));
+                downloadHistory.add(download);
+            }
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        return downloadHistory;
+    }
 
     /*
      * Update each button's state based off of the
@@ -375,5 +461,7 @@ private ArrayList<Download> downloadHistory;
         ImageIcon img = new ImageIcon("icon.png");
         manager.setIconImage(img.getImage());
         manager.show();
+        System.out.println("main method executing");
+
     }
 }

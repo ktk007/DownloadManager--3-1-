@@ -1,9 +1,28 @@
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.File;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Observable;
+
+
+
 
 // This class downloads a file from a URL.
 class Download extends Observable implements Runnable {
+
+
+    private Connection getConnection() throws SQLException {
+        String url = "jdbc:mysql://localhost:3306/download_manager_db";
+        String username = "root";
+        String password = "admin";
+
+        return DriverManager.getConnection(url, username, password);
+    }
 
     // Max size of download buffer.
     private static final int MAX_BUFFER_SIZE = 1024;
@@ -32,6 +51,8 @@ class Download extends Observable implements Runnable {
     private float avgSpeed = 0; // average download speed in KB/s
     private float speed = 0; // download speed in KB/s
    // private static File downloadFolder;// Add a variable to store the download folder
+// Add a new field to store the download folder
+   private File downloadFolder;
 
     // Set the download folder
 
@@ -40,10 +61,9 @@ class Download extends Observable implements Runnable {
 
     // Constructor for Download.
 
-    public Download(URL url) {
+    public Download(URL url, File downloadFolder) {
         this.url = url;
-        //this.downloadFolder = downloadFolder; // Set the download folder
-
+        this.downloadFolder = downloadFolder; // Set the download folder
         size = -1;
         downloaded = 0;
         status = DOWNLOADING;
@@ -187,7 +207,7 @@ class Download extends Observable implements Runnable {
             // used to update speed at regular intervals
             int i = 0;
             // Open file and seek to the end of it.
-            file = new RandomAccessFile(getFileName(url), "rw");
+            file = new RandomAccessFile(new File(downloadFolder, getFileName(url)), "rw");
             file.seek(downloaded);
 
             stream = connection.getInputStream();
@@ -235,8 +255,10 @@ class Download extends Observable implements Runnable {
              * reached because downloading has finished.
              */
             if (status == DOWNLOADING) {
-                status = COMPLETE;
+                status = COMPLETE; // Set status to COMPLETE on successful completion
                 stateChanged();
+                // Insert download data into the database
+                insertDownloadDataIntoDatabase();
             }
         } catch (Exception e) {
             System.out.println(e);
@@ -258,11 +280,44 @@ class Download extends Observable implements Runnable {
                 }
             }
         }
+        System.out.println("Download.run() method called.");
+
+    }
+
+    private void insertDownloadDataIntoDatabase() throws SQLException {
+        String sql = "INSERT INTO download_history (url, size, progress, status) VALUES (?, ?, ?, ?)";
+
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/download_manager_db", "root", "admin");
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, getUrl());
+            statement.setLong(2, getSize());
+            statement.setFloat(3, getProgress());
+            statement.setInt(4, getStatus());
+
+            statement.executeUpdate();
+            System.out.println("Download inserted into the database: " + getUrl());
+        }
     }
 
     // Notify observers that this download's status has changed.
     private void stateChanged() {
         setChanged();
         notifyObservers();
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+        stateChanged();
+    }
+
+    public void setSize(long size) {
+        this.size = size;
+        stateChanged();
+    }
+
+    public void setDownloaded(long downloaded) {
+        this.downloaded = downloaded;
+        stateChanged();
     }
 }

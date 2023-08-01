@@ -27,6 +27,7 @@ class DownloadsTableModel extends AbstractTableModel
 
 
 
+
     // Add a new download to the table.
     public void addDownload(Download download) {
 
@@ -69,12 +70,12 @@ class DownloadsTableModel extends AbstractTableModel
 
     // Get table's row count.
     public int getRowCount() {
-        return downloadList.size();
+        return downloadList.size() + downloadHistory.size();
     }
 
     // Get value for a specific row and column combination.
     public Object getValueAt(int row, int col) {
-        if (row < getRowCount() - downloadHistory.size()){
+        if (row < downloadList.size()){
         Download download = downloadList.get(row);
         switch (col) {
             case 0: // URL
@@ -97,7 +98,9 @@ class DownloadsTableModel extends AbstractTableModel
         }}
         else{
                 Download download = downloadHistory.get(row - (getRowCount() - downloadHistory.size()));
-                switch (col) {
+            //Download download = downloadHistory.get(row - downloadList.size());
+
+            switch (col) {
                     case 0: // URL
                         return download.getUrl();
                     case 1: // Size
@@ -123,6 +126,7 @@ class DownloadsTableModel extends AbstractTableModel
     public void addDownloadToHistory(Download download) {
         downloadHistory.add(download);
         fireTableDataChanged(); // Notify the table that data has changed
+        System.out.println("Download added to history: " + download.getUrl());
     }
 
     /*
