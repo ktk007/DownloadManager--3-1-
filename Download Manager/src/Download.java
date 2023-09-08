@@ -16,6 +16,8 @@ import java.util.Observable;
 class Download extends Observable implements Runnable {
 
 
+    private String fileType; // Add this attribute
+
     private Connection getConnection() throws SQLException {
         String url = "jdbc:mysql://localhost:3306/download_manager_db";
         String username = "root";
@@ -23,6 +25,8 @@ class Download extends Observable implements Runnable {
 
         return DriverManager.getConnection(url, username, password);
     }
+
+
 
     // Max size of download buffer.
     private static final int MAX_BUFFER_SIZE = 1024;
@@ -54,22 +58,22 @@ class Download extends Observable implements Runnable {
 // Add a new field to store the download folder
    private File downloadFolder;
 
-    // Set the download folder
-
-
-
-
     // Constructor for Download.
 
-    public Download(URL url, File downloadFolder) {
+    public Download(URL url, File downloadFolder,String fileType) {
         this.url = url;
-        this.downloadFolder = downloadFolder; // Set the download folder
+        this.downloadFolder = downloadFolder;
+        this.fileType=fileType;
+
+        // Set the download folder
         size = -1;
         downloaded = 0;
         status = DOWNLOADING;
         // Begin the download.
         download();
     }
+
+
 
     // Get this download's URL.
     public String getUrl() {
@@ -153,16 +157,40 @@ class Download extends Observable implements Runnable {
         stateChanged();
     }
 
+
+
+
     // Start or resume downloading.
     private void download() {
         Thread thread = new Thread(this);
         thread.start();
     }
+    // Called when the download is complete.
+    private void downloadComplete() {
+        status = COMPLETE;
+        stateChanged();
+
+        // Insert download data into the database
+        try {
+            insertDownloadDataIntoDatabase();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     // Get file name portion of URL.
-    String getFileName(URL url) {
-        String fileName = this.url.getFile();
-        return fileName.substring(fileName.lastIndexOf('/') + 1);
+     String getFileName(URL url) {
+         String fileName = this.url.getFile();
+         String fileExtension = fileType != null && !fileType.isEmpty() ? "." + fileType : "";
+
+        // Extract the file name without extension
+        String nameWithoutExtension = fileName.substring(fileName.lastIndexOf('/') + 1);
+
+        // Sanitize the name (remove invalid characters)
+        nameWithoutExtension = nameWithoutExtension.replaceAll("[^a-zA-Z0-9.-]", "_");
+
+        return nameWithoutExtension + fileExtension;
+        //return fileName.substring(fileName.lastIndexOf('/') + 1);
     }
 
     // Download file.
@@ -171,9 +199,6 @@ class Download extends Observable implements Runnable {
         InputStream stream = null;
 
         try {
-            // when creating the RandomAccessFile:
-            //file = new RandomAccessFile(new File(downloadFolder, getFileName(url)), "rw");
-
 
             // Open connection to URL.
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -255,10 +280,10 @@ class Download extends Observable implements Runnable {
              * reached because downloading has finished.
              */
             if (status == DOWNLOADING) {
-                status = COMPLETE; // Set status to COMPLETE on successful completion
+                status = COMPLETE;
+                downloadComplete();
                 stateChanged();
-                // Insert download data into the database
-                insertDownloadDataIntoDatabase();
+
             }
         } catch (Exception e) {
             System.out.println(e);
@@ -294,6 +319,7 @@ class Download extends Observable implements Runnable {
             statement.setLong(2, getSize());
             statement.setFloat(3, getProgress());
             statement.setInt(4, getStatus());
+            //statement.setString(5, fileType); // Insert fileType into the database
 
             statement.executeUpdate();
             System.out.println("Download inserted into the database: " + getUrl());
@@ -306,8 +332,10 @@ class Download extends Observable implements Runnable {
         notifyObservers();
     }
 
-    public void setStatus(int status) {
+    public void setStatus(int status) throws SQLException {
         this.status = status;
+        // Insert download data into the database
+        //updateDatabase();// Insert or update database based on status
         stateChanged();
     }
 
@@ -320,4 +348,10 @@ class Download extends Observable implements Runnable {
         this.downloaded = downloaded;
         stateChanged();
     }
+    // Getter for fileType
+    public String getFileType() {
+        return fileType;
+    }
+
+
 }

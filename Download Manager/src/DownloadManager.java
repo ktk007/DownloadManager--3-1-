@@ -14,6 +14,7 @@ import java.util.Observer;
 import java.util.Properties;
 
 
+
 // The Download Manager.
 public class DownloadManager extends JFrame
         implements Observer {
@@ -24,10 +25,17 @@ public class DownloadManager extends JFrame
     private static final String DB_PASSWORD = "admin";
     private File downloadFolder;
 
+    private JFrame Filter; // Declare a JFrame for the new window
 
     private Connection connection;
     //add history
     private ArrayList<Download> downloadHistory;
+    // Add these fields to store download lists for different types
+    private ArrayList<Download> pdfDownloads;
+    private ArrayList<Download> documentDownloads;
+    private ArrayList<Download> musicDownloads;
+    private ArrayList<Download> videoDownloads;
+    private ArrayList<Download> otherDownloads;
 
 
     // Add download text field.
@@ -49,6 +57,7 @@ public class DownloadManager extends JFrame
 
     // Flag for whether or not table selection is being cleared.
     private boolean clearing;
+
     private File chooseDownloadFolder() {
         JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
         fileChooser.setDialogTitle("Select Download Folder");
@@ -65,18 +74,17 @@ public class DownloadManager extends JFrame
 
     // Constructor for Download Manager.
     public DownloadManager() {
+        // ImageIcon img=new ImageIcon("icon3.png");
 
-        // Initialize the downloadHistory list
+        //Initialize the downloadHistory list
         downloadHistory = new ArrayList<>();
         // Set up database connection
         initializeDatabaseConnection();
-
-
         // Set application title.
         setTitle("Download Manager");
 
         // Set window size.
-        setSize(640, 480);
+        setSize(1000, 800);
 
         // Handle window closing events.
         addWindowListener(new WindowAdapter() {
@@ -84,6 +92,13 @@ public class DownloadManager extends JFrame
                 actionExit();
             }
         });
+        // Initialize download lists
+        pdfDownloads = new ArrayList<>();
+        documentDownloads = new ArrayList<>();
+        musicDownloads = new ArrayList<>();
+        videoDownloads = new ArrayList<>();
+        otherDownloads = new ArrayList<>();
+
 
         // Set up file menu.
         JMenuBar menuBar = new JMenuBar();
@@ -100,9 +115,10 @@ public class DownloadManager extends JFrame
         menuBar.add(fileMenu);
         setJMenuBar(menuBar);
 
+
         // Set up add panel.
         JPanel addPanel = new JPanel();
-        addTextField = new JTextField(30);
+        addTextField = new JTextField(50);
         addPanel.add(addTextField);
         JButton addButton = new JButton("Add Download");
         addButton.addActionListener(new ActionListener() {
@@ -111,8 +127,6 @@ public class DownloadManager extends JFrame
             }
         });
         addPanel.add(addButton);
-        // Add panel for folder selection.
-
 
         // Set up Downloads table.
         tableModel = new DownloadsTableModel();
@@ -136,11 +150,13 @@ public class DownloadManager extends JFrame
 
         // Set up downloads panel.
         JPanel downloadsPanel = new JPanel();
+        //downloadsPanel.setPreferredSize(new Dimension(1000,500));
         downloadsPanel.setBorder(
                 BorderFactory.createTitledBorder("Downloads"));
         downloadsPanel.setLayout(new BorderLayout());
         downloadsPanel.add(new JScrollPane(table),
                 BorderLayout.CENTER);
+
 
         // Set up buttons panel.
         JPanel buttonsPanel = new JPanel();
@@ -178,20 +194,125 @@ public class DownloadManager extends JFrame
         clearButton.setEnabled(false);
         buttonsPanel.add(clearButton);
 
-        JButton historyButton = new JButton("History");
+
+        // Create a Color object for Powder Blue
+        Color powderBlue = new Color(176, 224, 230);
+        //set another panel
+        JPanel newPanel = new JPanel();
+        newPanel.setPreferredSize(new Dimension(200, 590));
+        newPanel.setBackground(powderBlue);
+        JButton allDownloads = new JButton("Trash");
+        JButton filters = new JButton("Filters");
+        newPanel.add(Box.createVerticalStrut(250)); // Adjust the spacing (10 pixels) as needed
+        newPanel.add(allDownloads);
+        newPanel.add(Box.createVerticalStrut(20)); // Adjust the spacing (10 pixels) as needed
+        newPanel.add(filters);
+        newPanel.add(Box.createVerticalStrut(20));
+        filters.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                openFilters(); // Open the new window when the button is clicked
+            }
+        });
+        JButton historyButton = new JButton("All Downloads");
         historyButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionHistory();
             }
         });
-        buttonsPanel.add(historyButton);
 
+        newPanel.add(historyButton);
+        newPanel.setLayout(new BoxLayout(newPanel, BoxLayout.Y_AXIS));
         // Add panels to display.
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(addPanel, BorderLayout.NORTH);
         getContentPane().add(downloadsPanel, BorderLayout.CENTER);
         getContentPane().add(buttonsPanel, BorderLayout.SOUTH);
+        getContentPane().add(newPanel, BorderLayout.WEST);
+
+
     }
+
+    private void openFilters() {
+        if (Filter == null) {
+            Filter = new JFrame("Filters Window");
+            Filter.setSize(800, 300);
+// Create a Color object for Powder Blue
+            Color powderBlue = new Color(176, 224, 230);
+            Color teal = new Color(90, 200, 208);
+
+            // Create a single panel for buttons
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.setBackground(powderBlue);
+// Set the layout manager for the panel to make buttons align vertically
+            //buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+
+            // Create buttons for each category
+            JButton pdfButton = new JButton("PDF");
+            JButton docButton = new JButton("Documents");
+            JButton musicButton = new JButton("Music");
+            JButton videoButton = new JButton("Video");
+            JButton othersButton = new JButton("Others");
+
+            // Add buttons to the button panel
+            buttonPanel.add(Box.createVerticalStrut(300)); // Adjust the spacing (10 pixels) as needed
+            buttonPanel.add(pdfButton);
+            buttonPanel.add(Box.createHorizontalStrut(20)); // Adjust the spacing (10 pixels) as needed
+            buttonPanel.add(docButton);
+            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(musicButton);
+            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(videoButton);
+            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(othersButton);
+            // Add action listeners to the buttons
+            pdfButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    showCategoryDownloads(pdfDownloads, "PDF Downloads");
+                }
+            });
+
+            docButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    showCategoryDownloads(documentDownloads, "Document Downloads");
+                }
+            });
+
+            musicButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    showCategoryDownloads(musicDownloads, "Music Downloads");
+                }
+            });
+
+            videoButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    showCategoryDownloads(videoDownloads, "Video Downloads");
+                }
+            });
+
+            othersButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    showCategoryDownloads(otherDownloads, "Other Downloads");
+                }
+            });
+
+            /*// Create a JTextArea for displaying download links
+            JTextArea linkTextArea = new JTextArea(20, 40);
+            linkTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(linkTextArea);
+
+            // Create a split pane to hold the button panel and link text area
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buttonPanel, scrollPane);
+            splitPane.setResizeWeight(1.0); // Adjust the split pane width
+
+            // Add the split pane to the FiltersWindow*/
+            Filter.add(buttonPanel);
+
+
+            Filter.setVisible(true);
+        }
+}
+
+
 
     private void initializeDatabaseConnection() {
         try {
@@ -227,11 +348,36 @@ public class DownloadManager extends JFrame
 
     // Add a new download.
     private void actionAdd() {
+        String urlText = addTextField.getText().trim();
+        if (urlText.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "URL field is empty.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         URL verifiedUrl = verifyUrl(addTextField.getText());
         if (verifiedUrl != null) {
             File downloadFolder = chooseDownloadFolder();
             if (downloadFolder != null) {
-                tableModel.addDownload(new Download(verifiedUrl, downloadFolder));
+                //determine the file type based on the file extension
+                String fileType = getFileType(String.valueOf(verifiedUrl));
+
+                Download download = new Download(verifiedUrl, downloadFolder, fileType);
+
+                tableModel.addDownload(download);
+
+                // Add download to the appropriate category based on file type
+                if ("pdf".equalsIgnoreCase(fileType)) {
+                    pdfDownloads.add(download);
+                } else if ("doc".equalsIgnoreCase(fileType) || "docx".equalsIgnoreCase(fileType)) {
+                    documentDownloads.add(download);
+                } else if ("mp3".equalsIgnoreCase(fileType)) {
+                    musicDownloads.add(download);
+                } else if ("mp4".equalsIgnoreCase(fileType)) {
+                    videoDownloads.add(download);
+                } else {
+                    otherDownloads.add(download);
+                }
                 System.out.println("DownloadManager.actionAdd() - Download added to tableModel.");
 
             }
@@ -243,7 +389,12 @@ public class DownloadManager extends JFrame
         }
     }
 
-
+    private String getFileType(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex != -1 && dotIndex < fileName.length() - 1) {
+            return fileName.substring(dotIndex + 1).toLowerCase();
+        }
+        return "file"; }// Default fileType*/
 
     // Verify download URL.
     private URL verifyUrl(String url) {
@@ -346,7 +497,6 @@ public class DownloadManager extends JFrame
     //history button
     private void actionHistory()  {
         try {
-
             // Retrieve download history from the database
             ArrayList<Download> downloadHistory = fetchDownloadHistoryFromDatabase();
             StringBuilder historyMessage = new StringBuilder();
@@ -355,6 +505,7 @@ public class DownloadManager extends JFrame
                 historyMessage.append("Size: ").append(download.getSize()).append(" bytes\n");
                 historyMessage.append("Progress: ").append(download.getProgress()).append("%\n");
                 historyMessage.append("Status: ").append(Download.STATUSES[download.getStatus()]).append("\n");
+
                 historyMessage.append("------------------------------------------------\n");
             }
 
@@ -374,7 +525,21 @@ public class DownloadManager extends JFrame
                     JOptionPane.ERROR_MESSAGE);
         }
     }
+    // Method to show downloads for a specific category
+    private void showCategoryDownloads(ArrayList<Download> downloads, String categoryName) {
+        StringBuilder message = new StringBuilder();
+        message.append("Category: ").append(categoryName).append("\n\n");
 
+        for (Download download : downloads) {
+            message.append("URL: ").append(download.getUrl()).append("\n");
+        }
+
+        JTextArea textArea = new JTextArea(message.toString());
+        textArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400));
+        JOptionPane.showMessageDialog(this, scrollPane, categoryName, JOptionPane.INFORMATION_MESSAGE);
+    }
 
     // Method to retrieve download history from the database.
     private ArrayList<Download> fetchDownloadHistoryFromDatabase() throws SQLException {
@@ -384,11 +549,14 @@ public class DownloadManager extends JFrame
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
                 String url = resultSet.getString("url");
-                long size = resultSet.getInt("size");
+                long size = resultSet.getLong("size");
                 float progress = resultSet.getFloat("progress");
                 int status = resultSet.getInt("status");
-                Download download = new Download(new URL(url),downloadFolder);
-                download.setSize((int) size);
+                // Now, you need to determine the fileType based on the URL or other means.
+                String fileType = determineFileType(url);
+                // Create a Download object with the correct fileType
+                Download download = new Download(new URL(url), downloadFolder, fileType);
+                download.setSize(size);
                 download.setStatus(status);
                 download.setDownloaded((long) (size * progress / 100));
                 downloadHistory.add(download);
@@ -397,6 +565,14 @@ public class DownloadManager extends JFrame
             throw new RuntimeException(e);
         }
         return downloadHistory;
+    }
+    private String determineFileType(String url) {
+        String[] parts = url.split("\\.");
+        if (parts.length > 0) {
+            String extension = parts[parts.length - 1];
+            return extension.toLowerCase(); // Return the file extension in lowercase
+        }
+        return "file"; // Return an empty string if no extension found
     }
 
     /*
@@ -458,10 +634,18 @@ public class DownloadManager extends JFrame
     // Run the Download Manager.
     public static void main(String[] args) {
         DownloadManager manager = new DownloadManager();
-        ImageIcon img = new ImageIcon("icon.png");
+        ImageIcon img = new ImageIcon("icon3.png");
         manager.setIconImage(img.getImage());
         manager.show();
         System.out.println("main method executing");
 
     }
 }
+
+//https://gfgc.kar.nic.in/sirmv-science/GenericDocHandler/138-a2973dc6-c024-4d81-be6d-5c3344f232ce.pdf
+//https://www.cs.cmu.edu/afs/cs.cmu.edu/user/gchen/www/download/java/LearnJava.pdf
+//https://file-examples.com/storage/fe235481fb64f1ca49a92b5/2017/11/file_example_MP3_700KB.mp3
+//https://file-examples.com/storage/fe235481fb64f1ca49a92b5/2017/11/file_example_MP3_5MG.mp3
+//https://file-examples.com/storage/fe235481fb64f1ca49a92b5/2017/10/file_example_JPG_100kB.jpg
+//https://file-examples.com/storage/fe235481fb64f1ca49a92b5/2017/10/file_example_PNG_1MB.png
+//https://file-examples.com/storage/fe235481fb64f1ca49a92b5/2017/04/file_example_MP4_640_3MG.mp4
