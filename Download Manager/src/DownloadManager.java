@@ -201,13 +201,23 @@ public class DownloadManager extends JFrame
         JPanel newPanel = new JPanel();
         newPanel.setPreferredSize(new Dimension(200, 590));
         newPanel.setBackground(powderBlue);
-        JButton allDownloads = new JButton("Trash");
+        JButton checkInternetButton = new JButton("Check Internet");
         JButton filters = new JButton("Filters");
         newPanel.add(Box.createVerticalStrut(250)); // Adjust the spacing (10 pixels) as needed
-        newPanel.add(allDownloads);
+        newPanel.add(checkInternetButton);
         newPanel.add(Box.createVerticalStrut(20)); // Adjust the spacing (10 pixels) as needed
         newPanel.add(filters);
         newPanel.add(Box.createVerticalStrut(20));
+        checkInternetButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (InternetConnectionCheck.isInternetAvailable()) {
+                    JOptionPane.showMessageDialog(null, "Internet is ON");
+                } else {
+                    JOptionPane.showMessageDialog(null, "Internet is OFF");
+                }
+            }
+        });
         filters.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 openFilters(); // Open the new window when the button is clicked
@@ -267,31 +277,33 @@ public class DownloadManager extends JFrame
             // Add action listeners to the buttons
             pdfButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    showCategoryDownloads(pdfDownloads, "PDF Downloads");
+                    showCategoryDownloads("PDF Documents");
                 }
             });
 
             docButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    showCategoryDownloads(documentDownloads, "Document Downloads");
+                    showCategoryDownloads("Documents");
                 }
             });
 
+
             musicButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    showCategoryDownloads(musicDownloads, "Music Downloads");
+                    showCategoryDownloads("Music");
                 }
             });
 
             videoButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    showCategoryDownloads(videoDownloads, "Video Downloads");
+                    showCategoryDownloads("Videos");
                 }
             });
 
+
             othersButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    showCategoryDownloads(otherDownloads, "Other Downloads");
+                    showCategoryDownloads("Others");
                 }
             });
 
@@ -366,7 +378,7 @@ public class DownloadManager extends JFrame
 
                 tableModel.addDownload(download);
 
-                // Add download to the appropriate category based on file type
+               /* // Add download to the appropriate category based on file type
                 if ("pdf".equalsIgnoreCase(fileType)) {
                     pdfDownloads.add(download);
                 } else if ("doc".equalsIgnoreCase(fileType) || "docx".equalsIgnoreCase(fileType)) {
@@ -377,7 +389,7 @@ public class DownloadManager extends JFrame
                     videoDownloads.add(download);
                 } else {
                     otherDownloads.add(download);
-                }
+                }*/
                 System.out.println("DownloadManager.actionAdd() - Download added to tableModel.");
 
             }
@@ -526,20 +538,63 @@ public class DownloadManager extends JFrame
         }
     }
     // Method to show downloads for a specific category
-    private void showCategoryDownloads(ArrayList<Download> downloads, String categoryName) {
-        StringBuilder message = new StringBuilder();
-        message.append("Category: ").append(categoryName).append("\n\n");
+    private void showCategoryDownloads(String categoryName) {
+        ArrayList<Download> downloads = null;
 
-        for (Download download : downloads) {
-            message.append("URL: ").append(download.getUrl()).append("\n");
+        try {
+            downloads = loadDownloadsFromDatabase(categoryName);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle the exception appropriately
         }
 
-        JTextArea textArea = new JTextArea(message.toString());
-        textArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new Dimension(600, 400));
-        JOptionPane.showMessageDialog(this, scrollPane, categoryName, JOptionPane.INFORMATION_MESSAGE);
+        if (downloads != null) {
+            StringBuilder message = new StringBuilder();
+            message.append("Category: ").append(categoryName).append("\n\n");
+
+            for (Download download : downloads) {
+                message.append("URL: ").append(download.getUrl()).append("\n");
+            }
+
+            JTextArea textArea = new JTextArea(message.toString());
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(600, 400));
+            JOptionPane.showMessageDialog(this, scrollPane, categoryName, JOptionPane.INFORMATION_MESSAGE);
+        }
     }
+
+    private ArrayList<Download> loadDownloadsFromDatabase(String categoryName) throws SQLException {
+        ArrayList<Download> downloads = new ArrayList<>();
+        String sql = "SELECT * FROM download_history WHERE category = ?";
+
+        try (
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, categoryName);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                String url = resultSet.getString("url");
+                long size = resultSet.getLong("size");
+                float progress = resultSet.getFloat("progress");
+                int status = resultSet.getInt("status");
+                String fileType = resultSet.getString("fileType");
+
+                Download download = new Download(new URL(url), downloadFolder, fileType);
+                download.setSize(size);
+                download.setStatus(status);
+                download.setDownloaded((long) (size * progress / 100));
+                downloads.add(download);
+            }
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return downloads;
+    }
+
+
 
     // Method to retrieve download history from the database.
     private ArrayList<Download> fetchDownloadHistoryFromDatabase() throws SQLException {

@@ -172,11 +172,14 @@ class Download extends Observable implements Runnable {
 
         // Insert download data into the database
         try {
+            String categoryName = mapFileTypeToCategory(getFileType()); // Set the categoryName based on your category mapping
             insertDownloadDataIntoDatabase();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+
 
     // Get file name portion of URL.
      String getFileName(URL url) {
@@ -310,16 +313,18 @@ class Download extends Observable implements Runnable {
     }
 
     private void insertDownloadDataIntoDatabase() throws SQLException {
-        String sql = "INSERT INTO download_history (url, size, progress, status) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO download_history (url, size, progress, status, fileType, category) VALUES (?, ?, ?, ?, ?, ?)";
 
-        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/download_manager_db", "root", "admin");
+        try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, getUrl());
             statement.setLong(2, getSize());
             statement.setFloat(3, getProgress());
             statement.setInt(4, getStatus());
-            //statement.setString(5, fileType); // Insert fileType into the database
+            statement.setString(5, getFileType());
+            String categoryName = mapFileTypeToCategory(getFileType());
+            statement.setString(6, categoryName);
 
             statement.executeUpdate();
             System.out.println("Download inserted into the database: " + getUrl());
@@ -348,6 +353,29 @@ class Download extends Observable implements Runnable {
         this.downloaded = downloaded;
         stateChanged();
     }
+    private String mapFileTypeToCategory(String fileType) {
+        if (fileType == null) {
+            return "Others";
+        }
+        switch (fileType.toLowerCase()) {
+            case "pdf":
+                return "PDF Documents";
+            case "mp3":
+            case "wav":
+            case "aac":
+                return "Music";
+            case "mp4":
+            case "mkv":
+            case "avi":
+                return "Videos";
+            case "doc":
+            case "docx":
+                return "Documents";
+            default:
+                return "Others";
+        }
+    }
+
     // Getter for fileType
     public String getFileType() {
         return fileType;
