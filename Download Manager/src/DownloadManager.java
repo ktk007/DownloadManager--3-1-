@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileSystemView;
@@ -82,10 +83,11 @@ public class DownloadManager extends JFrame
         initializeDatabaseConnection();
         // Set application title.
         setTitle("Download Manager");
+        setFont(new Font("DialogInput",Font.BOLD,13));
 
         // Set window size.
         setSize(1000, 800);
-
+        Border border= BorderFactory.createLineBorder(Color.BLACK,3);
         // Handle window closing events.
         addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
@@ -102,8 +104,10 @@ public class DownloadManager extends JFrame
 
         // Set up file menu.
         JMenuBar menuBar = new JMenuBar();
+        menuBar.setBackground(Color.DARK_GRAY);
         JMenu fileMenu = new JMenu("File");
         fileMenu.setMnemonic(KeyEvent.VK_F);
+        fileMenu.setForeground(Color.darkGray);
         JMenuItem fileExitMenuItem = new JMenuItem("Exit",
                 KeyEvent.VK_X);
         fileExitMenuItem.addActionListener(new ActionListener() {
@@ -115,12 +119,18 @@ public class DownloadManager extends JFrame
         menuBar.add(fileMenu);
         setJMenuBar(menuBar);
 
+        // Create a Color object for Powder Blue
+        Color powderBlue = new Color(176, 224, 230);
 
         // Set up add panel.
         JPanel addPanel = new JPanel();
-        addTextField = new JTextField(50);
+        addTextField = new JTextField(37);
         addPanel.add(addTextField);
+        addPanel.setBackground(Color.black);
         JButton addButton = new JButton("Add Download");
+        addButton.setForeground(powderBlue);
+        addButton.setBackground(Color.DARK_GRAY);
+        addButton.setFont(new Font("DialogInput",Font.BOLD,13));
         addButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionAdd();
@@ -131,6 +141,7 @@ public class DownloadManager extends JFrame
         // Set up Downloads table.
         tableModel = new DownloadsTableModel();
         table = new JTable(tableModel);
+        table.setBackground(Color.GRAY);
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 tableSelectionChanged();
@@ -150,7 +161,7 @@ public class DownloadManager extends JFrame
 
         // Set up downloads panel.
         JPanel downloadsPanel = new JPanel();
-        //downloadsPanel.setPreferredSize(new Dimension(1000,500));
+        downloadsPanel.setBackground(Color.GRAY);
         downloadsPanel.setBorder(
                 BorderFactory.createTitledBorder("Downloads"));
         downloadsPanel.setLayout(new BorderLayout());
@@ -160,8 +171,13 @@ public class DownloadManager extends JFrame
 
         // Set up buttons panel.
         JPanel buttonsPanel = new JPanel();
+        buttonsPanel.setBackground(Color.black);
         downloadHistory = new ArrayList<>();
         pauseButton = new JButton("Pause");
+        pauseButton.setForeground(powderBlue);
+        pauseButton.setBackground(Color.DARK_GRAY);
+        pauseButton.setFont(new Font("DialogInput",Font.BOLD,13));
+
         pauseButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionPause();
@@ -170,6 +186,9 @@ public class DownloadManager extends JFrame
         pauseButton.setEnabled(false);
         buttonsPanel.add(pauseButton);
         resumeButton = new JButton("Resume");
+        resumeButton.setForeground(powderBlue);
+        resumeButton.setBackground(Color.DARK_GRAY);
+        resumeButton.setFont(new Font("DialogInput",Font.BOLD,13));
         resumeButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionResume();
@@ -178,6 +197,10 @@ public class DownloadManager extends JFrame
         resumeButton.setEnabled(false);
         buttonsPanel.add(resumeButton);
         cancelButton = new JButton("Cancel");
+        cancelButton.setForeground(powderBlue);
+        cancelButton.setBackground(Color.DARK_GRAY);
+        cancelButton.setFont(new Font("DialogInput",Font.BOLD,13));
+
         cancelButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionCancel();
@@ -186,6 +209,9 @@ public class DownloadManager extends JFrame
         cancelButton.setEnabled(false);
         buttonsPanel.add(cancelButton);
         clearButton = new JButton("Clear");
+        clearButton.setForeground(powderBlue);
+        clearButton.setBackground(Color.DARK_GRAY);
+        clearButton.setFont(new Font("DialogInput",Font.BOLD,13));
         clearButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionClear();
@@ -195,19 +221,34 @@ public class DownloadManager extends JFrame
         buttonsPanel.add(clearButton);
 
 
-        // Create a Color object for Powder Blue
-        Color powderBlue = new Color(176, 224, 230);
         //set another panel
-        JPanel newPanel = new JPanel();
-        newPanel.setPreferredSize(new Dimension(200, 590));
-        newPanel.setBackground(powderBlue);
+        JPanel newPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        newPanel.setPreferredSize(new Dimension(220, 590));
+        newPanel.setBackground(Color.black);
         JButton checkInternetButton = new JButton("Check Internet");
-        JButton filters = new JButton("Filters");
-        newPanel.add(Box.createVerticalStrut(250)); // Adjust the spacing (10 pixels) as needed
+        checkInternetButton.setForeground(powderBlue);
+        checkInternetButton.setBackground(Color.black);
+        checkInternetButton.setBorder(BorderFactory.createEmptyBorder(40,40,5,10));
+        checkInternetButton.setFont(new Font("DialogInput",Font.BOLD,13));
+        JButton filters = new JButton(" Filters");
+        filters.setForeground(powderBlue);
+        filters.setBackground(Color.black);
+        filters.setBorder(BorderFactory.createEmptyBorder(40,40,5,10));
+        filters.setFont(new Font("DialogInput",Font.BOLD,13));
+        JButton historyButton = new JButton(" Downloads");
+        historyButton.setForeground(powderBlue);
+        historyButton.setBackground(Color.BLACK);
+        historyButton.setBorder(BorderFactory.createEmptyBorder(40,40,5,10));
+        historyButton.setFont(new Font("DialogInput",Font.BOLD,13));
+        newPanel.add(Box.createVerticalStrut(150));// Adjust the spacing (10 pixels) as needed
         newPanel.add(checkInternetButton);
-        newPanel.add(Box.createVerticalStrut(20)); // Adjust the spacing (10 pixels) as needed
+        newPanel.add(Box.createVerticalStrut(30)); // Adjust the spacing (10 pixels) as needed
         newPanel.add(filters);
-        newPanel.add(Box.createVerticalStrut(20));
+        newPanel.add(Box.createVerticalStrut(30));
+        newPanel.add(historyButton);
+
+
+
         checkInternetButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -223,14 +264,33 @@ public class DownloadManager extends JFrame
                 openFilters(); // Open the new window when the button is clicked
             }
         });
-        JButton historyButton = new JButton("All Downloads");
         historyButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 actionHistory();
             }
         });
+        /*JButton speedCurveButton = new JButton("Speed curve");
+        newPanel.add(speedCurveButton);
+        newPanel.add(Box.createVerticalStrut(20));*/
+// Import the DownloadSpeedCurve class
 
-        newPanel.add(historyButton);
+        /*speedCurveButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                ArrayList<Float> downloadSpeeds = selectedDownload.getDownloadSpeeds();
+                double[] time = new double[downloadSpeeds.size()];
+                double[] speed = new double[downloadSpeeds.size()];
+
+                for (int i = 0; i < downloadSpeeds.size(); i++) {
+                    time[i] = i;  // Assuming one unit of time per data point
+                    speed[i] = downloadSpeeds.get(i); // Download speed in KB/s
+                }
+
+                DownloadSpeedCurve.showDownloadSpeedCurve("Download Speed Curve", "Download Speed vs. Time", time, speed);
+            }
+        });*/
+
+
+        //newPanel.add(historyButton);
         newPanel.setLayout(new BoxLayout(newPanel, BoxLayout.Y_AXIS));
         // Add panels to display.
         getContentPane().setLayout(new BorderLayout());
@@ -245,35 +305,55 @@ public class DownloadManager extends JFrame
     private void openFilters() {
         if (Filter == null) {
             Filter = new JFrame("Filters Window");
-            Filter.setSize(800, 300);
+            Filter.setSize(400, 750);
 // Create a Color object for Powder Blue
             Color powderBlue = new Color(176, 224, 230);
             Color teal = new Color(90, 200, 208);
 
             // Create a single panel for buttons
             JPanel buttonPanel = new JPanel();
-            buttonPanel.setBackground(powderBlue);
+            buttonPanel.setBackground(Color.BLACK);
 // Set the layout manager for the panel to make buttons align vertically
             //buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
 
             // Create buttons for each category
             JButton pdfButton = new JButton("PDF");
+            pdfButton.setForeground(powderBlue);
+            pdfButton.setBackground(Color.black);
+            pdfButton.setBorder(BorderFactory.createEmptyBorder(0,100,0,0));
+            pdfButton.setFont(new Font("DialogInput",Font.BOLD,13));
             JButton docButton = new JButton("Documents");
+            docButton.setForeground(powderBlue);
+            docButton.setBackground(Color.black);
+            docButton.setBorder(BorderFactory.createEmptyBorder(0,100,0,0));
+            docButton.setFont(new Font("DialogInput",Font.BOLD,13));
             JButton musicButton = new JButton("Music");
+            musicButton.setForeground(powderBlue);
+            musicButton.setBackground(Color.black);
+            musicButton.setBorder(BorderFactory.createEmptyBorder(0,100,0,0));
+            musicButton.setFont(new Font("DialogInput",Font.BOLD,13));
             JButton videoButton = new JButton("Video");
+            videoButton.setForeground(powderBlue);
+            videoButton.setBackground(Color.black);
+            videoButton.setBorder(BorderFactory.createEmptyBorder(0,100,0,0));
+            videoButton.setFont(new Font("DialogInput",Font.BOLD,13));
             JButton othersButton = new JButton("Others");
-
+            othersButton.setForeground(powderBlue);
+            othersButton.setBackground(Color.black);
+            othersButton.setBorder(BorderFactory.createEmptyBorder(0,100,0,0));
+            othersButton.setFont(new Font("DialogInput",Font.BOLD,13));
             // Add buttons to the button panel
-            buttonPanel.add(Box.createVerticalStrut(300)); // Adjust the spacing (10 pixels) as needed
+            buttonPanel.add(Box.createVerticalStrut(250)); // Adjust the spacing (10 pixels) as needed
             buttonPanel.add(pdfButton);
-            buttonPanel.add(Box.createHorizontalStrut(20)); // Adjust the spacing (10 pixels) as needed
+            buttonPanel.add(Box.createVerticalStrut(40)); // Adjust the spacing (10 pixels) as needed
             buttonPanel.add(docButton);
-            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(Box.createVerticalStrut(40));
             buttonPanel.add(musicButton);
-            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(Box.createVerticalStrut(40));
             buttonPanel.add(videoButton);
-            buttonPanel.add(Box.createHorizontalStrut(20));
+            buttonPanel.add(Box.createVerticalStrut(40));
             buttonPanel.add(othersButton);
+
             // Add action listeners to the buttons
             pdfButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -306,15 +386,7 @@ public class DownloadManager extends JFrame
                     showCategoryDownloads("Others");
                 }
             });
-
-            /*// Create a JTextArea for displaying download links
-            JTextArea linkTextArea = new JTextArea(20, 40);
-            linkTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(linkTextArea);
-
-            // Create a split pane to hold the button panel and link text area
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buttonPanel, scrollPane);
-            splitPane.setResizeWeight(1.0); // Adjust the split pane width
+            buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
 
             // Add the split pane to the FiltersWindow*/
             Filter.add(buttonPanel);
@@ -322,11 +394,7 @@ public class DownloadManager extends JFrame
 
             Filter.setVisible(true);
         }
-}
-
-
-
-    private void initializeDatabaseConnection() {
+}      private void initializeDatabaseConnection() {
         try {
             Properties props = new Properties();
             props.put("user", DB_USER);
@@ -339,7 +407,6 @@ public class DownloadManager extends JFrame
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-
     // Exit this program.
     private void actionExit() {
         // Delete all downloads from the database before exiting
@@ -357,7 +424,6 @@ public class DownloadManager extends JFrame
 
         System.exit(0);
     }
-
     // Add a new download.
     private void actionAdd() {
         String urlText = addTextField.getText().trim();
@@ -377,19 +443,6 @@ public class DownloadManager extends JFrame
                 Download download = new Download(verifiedUrl, downloadFolder, fileType);
 
                 tableModel.addDownload(download);
-
-               /* // Add download to the appropriate category based on file type
-                if ("pdf".equalsIgnoreCase(fileType)) {
-                    pdfDownloads.add(download);
-                } else if ("doc".equalsIgnoreCase(fileType) || "docx".equalsIgnoreCase(fileType)) {
-                    documentDownloads.add(download);
-                } else if ("mp3".equalsIgnoreCase(fileType)) {
-                    musicDownloads.add(download);
-                } else if ("mp4".equalsIgnoreCase(fileType)) {
-                    videoDownloads.add(download);
-                } else {
-                    otherDownloads.add(download);
-                }*/
                 System.out.println("DownloadManager.actionAdd() - Download added to tableModel.");
 
             }

@@ -9,11 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Observable;
 
-
-
-
 // This class downloads a file from a URL.
-class Download extends Observable implements Runnable {
+public class Download extends Observable implements Runnable {
 
 
     private String fileType; // Add this attribute
@@ -380,6 +377,7 @@ class Download extends Observable implements Runnable {
     public String getFileType() {
         return fileType;
     }
+
 
 
 }
